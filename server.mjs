@@ -1,92 +1,111 @@
 import express from 'express';
-import morgan from 'morgan';
 import cors from 'cors';
-import Mongoose from 'mongoose';
+import mongoose from 'mongoose';
 
-Mongoose.connect('mongodb+srv://muhammadsaad:<password>@cluster0.40tp8.mongodb.net/myFirstDatabase?retryWrites=true&w=majority', function(){
-    console.log('mongodb connected')
-})
+mongoose.connect(
+  'mongodb+srv://talha-dar:029029090909@cluster0.dvzlh.mongodb.net/myFirstDatabase?retryWrites=true&w=majority'
+);
 
-const User = Mongoose.model('User',{
-    student_name:String,
-    father_name:String,
-    age:String,
-    roll_no:String
+const users = mongoose.model('Users', {
+  name: String,
+  email: String,
+  address: String,
+  contact: Number,
 });
 
-const app =express();
-app.use(cors());
-app.use(express.json());
-app.use(morgan('short'));
-
+const app = express();
 const port = process.env.PORT || 3000;
-let users=[];
 
-app.use((req,res,next)=>{
-    console.log("req come ",req.body);
-    next();
-})
+//* SETUP FOR CORS NOT COMPULSORY
+app.use(
+  cors({
+    origin: '*',
+    //* SETUP FOR REQUEST METHODS
+    methods: ['GET', 'POST', 'DELETE', 'PUT'],
+  })
+);
 
-// get all record
-app.get('/users',(req,res)=>{
-    res.send(users);
-})
+//* PARSE THE JSON REQUEST
+app.use(express.json());
 
-//get only one record
-app.get('/user/:id',(req,res)=>{
-    if(users[req.params.id]){
-        res.send(users[req.params.id])
-    }else{
-        res.send('user not found')
-    }
-})
+//* HOME PAGE
+app.get('/', (req, res) => res.send('Home Page'));
 
-// add record 
-app.post('/user',(req,res)=>{
-    if(!req.body.student_name || !req.body.father_name || !req.body.age || !req.body.roll_no){
-        res.status(400).send('invalid code');
-    }else{
-        users.push({
-            student_name:req.body.student_name,
-            father_name:req.body.father_name,
-            age:req.body.age,
-            roll_no:req.body.roll_no,
-        })
-        res.send("user created");
-    }
-})
+//* GET ALL USERS
+app.get('/users', (req, res) =>
+  users
+    .find({})
+    .then((data) => res.status(200).send(data))
+    .catch((err) => console.log(err))
+);
 
-// add update
-app.put('/user/:id',(req,res)=>{
-    if(users[req.params.id]){
-        if(req.body.student_name){
-            users[req.params.id].student_name = req.body.student_name
-        }
-        if(req.body.father_name){
-            users[req.params.id].father_name = req.body.father_name
-        }
-        if(req.body.age){
-            users[req.params.id].age = req.body.age
-        }
-        if(req.body.roll_no){
-            users[req.params.id].roll_no = req.body.roll_no
-        }
-        res.send(users[req.params.id])
-    }else{
-        res.send('user not found')
-    }
-})
+//* GET SINGLE USER
+app.get('/user/:id', (req, res) => {
+  users
+    .findOne({ _id: req.params.id })
+    .then((data) => res.status(200).send(data))
+    .catch(
+      (err) => (res.status(400).send('An Error Occourde'), console.log(err))
+    );
+});
 
+//* CREATE THE NEW USER
+app.post('/user', (req, res) => {
+  if (
+    !req.body.name ||
+    !req.body.email ||
+    !req.body.address ||
+    !req.body.contact
+  ) {
+    res.status(400).send('Invalid Data');
+  } else {
+    new users({
+      name: req.body.name,
+      email: req.body.email,
+      address: req.body.address,
+      contact: req.body.contact,
+    })
+      .save()
+      .then(() => res.status(200).send('User Successfully Created.'))
+      .catch(
+        (err) => (res.status(404).send('An Error Occurred'), console.log(err))
+      );
+  }
+});
 
-app.delete('/user/:id',(req,res)=>{
-    if(users[req.params.id]){
-        users[req.params.id] ={};
-        res.send('user deleted');
-    }else{
-        res.send('user not found');
-    }
-})
+//* UPDATE THE SINGLE USER
+app.put('/user/:id', (req, res) => {
+  users
+    .findByIdAndUpdate(req.params.id, {
+      name: req.body.name,
+      email: req.body.email,
+      address: req.body.address,
+      contact: req.body.contact,
+    })
+    .then(() => res.status(200).send('User Updated Successfully.'))
+    .catch(
+      (err) => (res.status(404).send('An Error Occurred'), console.log(err))
+    );
+});
 
-app.listen(port,()=>{
-    console.log('server is running');
-})
+// //* DELETE ALL USERS
+app.delete('/users', (req, res) => {
+  users
+    .deleteMany({})
+    .then(() => res.status(200).send('All Users Deleted.'))
+    .catch(
+      (err) => (res.status(404).send('User Not Found.'), console.log(err))
+    );
+});
+
+//* DELETE THE SINGLE USER
+app.delete('/user/:id', (req, res) => {
+  users
+    .findByIdAndDelete(req.params.id)
+    .then(() => res.status(200).send('User Deleted'))
+    .catch(
+      (err) => (res.status(404).send('User Not Found.'), console.log(err))
+    );
+});
+
+app.listen(port, () => console.log(`Example app listening on port ${port}!`));
